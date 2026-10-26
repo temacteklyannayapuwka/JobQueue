@@ -1,0 +1,5 @@
+[
+  {"id": "report", "priority": 1, "payload": "daily report"},
+  {"id": "urgent-export", "priority": 10, "payload": "export orders"},
+  {"id": "backup", "priority": 10, "payload": "backup metadata"}
+]
