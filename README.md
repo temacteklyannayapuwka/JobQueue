@@ -18,6 +18,21 @@ A handler failure is recorded without stopping other tasks. Ctrl+C or SIGTERM st
 
 Each task has an `id`, integer `priority` (defaults to zero), and string `payload`. Empty IDs and duplicate IDs currently in the queue are rejected.
 
+## Scheduled tasks
+
+An optional `run_at` field sets the earliest dispatch time in RFC 3339 format:
+
+```json
+[
+  {"id": "later", "priority": 10, "payload": "scheduled text", "run_at": "2030-01-01T12:00:00Z"},
+  {"id": "now", "priority": 1, "payload": "ready text"}
+]
+```
+
+Omit `run_at` to run immediately. Past timestamps are ready immediately. Future tasks wait in a separate min-heap ordered by time, while ready tasks use the priority heap. Waiting for a scheduled task does not occupy a worker. The dispatcher wakes at the next due time without polling; Ctrl+C interrupts the wait.
+
+Priority applies among ready tasks. Equal priorities use original input order, including tasks promoted from the delayed heap. Running tasks are not preempted. Results still print after the entire batch finishes, so a far-future task keeps the CLI running until its time arrives or the process is canceled. Retry delays continue to occupy their worker.
+
 ## Retries
 
 ```sh

@@ -4,12 +4,14 @@ import (
 	"container/heap"
 	"errors"
 	"strings"
+	"time"
 )
 
 type Task struct {
-	ID       string `json:"id"`
-	Priority int    `json:"priority"`
-	Payload  string `json:"payload"`
+	RunAt    time.Time `json:"run_at,omitempty"`
+	ID       string    `json:"id"`
+	Priority int       `json:"priority"`
+	Payload  string    `json:"payload"`
 }
 
 type item struct {

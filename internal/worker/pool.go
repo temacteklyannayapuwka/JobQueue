@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/temacteklyannayapuwka/JobQueue/internal/queue"
 )
@@ -37,12 +38,11 @@ func RunWithRetry(ctx context.Context, tasks []queue.Task, workers int, handler 
 	if handler == nil {
 		return nil, errors.New("handler is required")
 	}
-	var q queue.Queue
-	for _, task := range tasks {
-		if err := q.Enqueue(task); err != nil {
-			return nil, err
-		}
+	schedule, err := queue.NewSchedule(tasks, time.Now())
+	if err != nil {
+		return nil, err
 	}
+
 	results := make([]Result, len(tasks))
 	if workers > len(tasks) {
 		workers = len(tasks)
@@ -61,17 +61,37 @@ func RunWithRetry(ctx context.Context, tasks []queue.Task, workers int, handler 
 	}
 	dispatched := 0
 dispatch:
-	for task, ok := q.Dequeue(); ok; task, ok = q.Dequeue() {
+	for schedule.Len() > 0 {
 		if ctx.Err() != nil {
 			break
 		}
+		task, ready := schedule.Peek(time.Now())
+		var send chan job
+		if ready {
+			send = jobs
+		}
+		var timer *time.Timer
+		var wake <-chan time.Time
+		if due, ok := schedule.NextRunAt(); ok {
+			timer = time.NewTimer(time.Until(due))
+			wake = timer.C
+		}
 		select {
 		case <-ctx.Done():
+			if timer != nil {
+				timer.Stop()
+			}
 			break dispatch
-		case jobs <- job{index: dispatched, task: task}:
+		case <-wake:
+		case send <- job{index: dispatched, task: task}:
+			schedule.Take()
 			dispatched++
 		}
+		if timer != nil {
+			timer.Stop()
+		}
 	}
+
 	close(jobs)
 	wg.Wait()
 	return results[:dispatched], ctx.Err()
