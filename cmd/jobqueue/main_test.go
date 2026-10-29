@@ -53,3 +53,15 @@ func TestRunWriteError(t *testing.T) {
 		t.Fatal("ignored write error")
 	}
 }
+
+func TestRunInvalidRetryOptions(t *testing.T) {
+	for _, policy := range []worker.RetryPolicy{{MaxAttempts: 0}, {MaxAttempts: 1, Delay: -1}} {
+		var out bytes.Buffer
+		if err := runWithRetry(context.Background(), strings.NewReader(`[{"id":"x"}]`), &out, 1, policy); err == nil {
+			t.Fatal("accepted invalid retry policy")
+		}
+		if out.Len() != 0 {
+			t.Fatal("unexpected output")
+		}
+	}
+}

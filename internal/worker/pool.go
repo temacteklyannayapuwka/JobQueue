@@ -11,10 +11,11 @@ import (
 type Handler func(context.Context, queue.Task) (string, error)
 
 type Result struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-	Output string `json:"output,omitempty"`
-	Error  string `json:"error,omitempty"`
+	Attempts int    `json:"attempts"`
+	ID       string `json:"id"`
+	Status   string `json:"status"`
+	Output   string `json:"output,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 type job struct {
@@ -23,6 +24,13 @@ type job struct {
 }
 
 func Run(ctx context.Context, tasks []queue.Task, workers int, handler Handler) ([]Result, error) {
+	return RunWithRetry(ctx, tasks, workers, handler, RetryPolicy{MaxAttempts: 1})
+}
+
+func RunWithRetry(ctx context.Context, tasks []queue.Task, workers int, handler Handler, policy RetryPolicy) ([]Result, error) {
+	if err := policy.validate(); err != nil {
+		return nil, err
+	}
 	if workers < 1 {
 		return nil, errors.New("workers must be positive")
 	}
@@ -46,18 +54,7 @@ func Run(ctx context.Context, tasks []queue.Task, workers int, handler Handler) 
 		go func() {
 			defer wg.Done()
 			for j := range jobs {
-				result := Result{ID: j.task.ID, Status: "succeeded"}
-				var output string
-				err := ctx.Err()
-				if err == nil {
-					output, err = handler(ctx, j.task)
-				}
-				if err != nil {
-					result.Status = "failed"
-					result.Error = err.Error()
-				} else {
-					result.Output = output
-				}
+				result := execute(ctx, j.task, handler, policy)
 				results[j.index] = result
 			}
 		}()
