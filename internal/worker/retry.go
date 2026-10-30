@@ -13,7 +13,7 @@ type RetryPolicy struct {
 	Delay       time.Duration
 }
 
-func (p RetryPolicy) validate() error {
+func (p RetryPolicy) Validate() error {
 	if p.MaxAttempts < 1 {
 		return errors.New("max attempts must be positive")
 	}

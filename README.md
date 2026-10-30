@@ -18,6 +18,22 @@ A handler failure is recorded without stopping other tasks. Ctrl+C or SIGTERM st
 
 Each task has an `id`, integer `priority` (defaults to zero), and string `payload`. Empty IDs and duplicate IDs currently in the queue are rejected.
 
+## HTTP mode
+
+```sh
+go run ./cmd/jobqueue -listen 127.0.0.1:8080 -workers 3 -attempts 3 -retry-delay 1s
+curl http://127.0.0.1:8080/health
+curl -X POST http://127.0.0.1:8080/run \
+  -H 'Content-Type: application/json' \
+  --data-binary @examples/tasks.json
+```
+
+`GET /health` returns `{"status":"ok"}`. `POST /run` accepts the same JSON array as the CLI and waits for execution to finish, returning `{"results":[...]}` in dispatch order. The task file is not loaded in HTTP mode. Task IDs must be unique within a batch; they can be reused in later requests.
+
+Only one batch runs at a time; overlapping `/run` requests receive `429`. Health checks remain available while a batch is running. Requests are limited to 1 MiB, and batch execution has a 30-second deadline. Invalid input returns `400`, oversized input `413`, and execution timeout `504`. A timeout discards partial results and cancels remaining work. Client disconnects and server shutdown also cancel execution, including scheduled waits and retry pauses. Ctrl+C or SIGTERM shuts down the server.
+
+This endpoint executes a batch synchronously. There is no background job ID or retained status. Keep the server bound to localhost for local use; authentication is not implemented.
+
 ## Scheduled tasks
 
 An optional `run_at` field sets the earliest dispatch time in RFC 3339 format:

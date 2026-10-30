@@ -32,7 +32,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunRejectsInvalidInput(t *testing.T) {
-	for _, input := range []string{``, `{}`, `[{`, `[{"id":""}]`, `[{"id":"x"},{"id":"x"}]`, `[{"id":"x","prioritty":2}]`, `[] []`, `[] junk`, `[{"id":"x","run_at":"tomorrow"}]`} {
+	for _, input := range []string{`null`, ``, `{}`, `[{`, `[{"id":""}]`, `[{"id":"x"},{"id":"x"}]`, `[{"id":"x","prioritty":2}]`, `[] []`, `[] junk`, `[{"id":"x","run_at":"tomorrow"}]`} {
 		t.Run(input, func(t *testing.T) {
 			var out bytes.Buffer
 			if err := run(context.Background(), strings.NewReader(input), &out, 2); err == nil {

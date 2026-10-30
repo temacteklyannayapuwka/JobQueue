@@ -29,7 +29,7 @@ func Run(ctx context.Context, tasks []queue.Task, workers int, handler Handler) 
 }
 
 func RunWithRetry(ctx context.Context, tasks []queue.Task, workers int, handler Handler, policy RetryPolicy) ([]Result, error) {
-	if err := policy.validate(); err != nil {
+	if err := policy.Validate(); err != nil {
 		return nil, err
 	}
 	if workers < 1 {
